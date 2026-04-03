@@ -16,8 +16,6 @@ else:
 
 BASE_DIR = DATA_DIR
 
-print(f"[DEBUG] TEMPLATE_DIR: {TEMPLATE_DIR}")
-print(f"[DEBUG] DATA_DIR: {DATA_DIR}")
 app = Flask(__name__, template_folder=TEMPLATE_DIR)
 app.config['UPLOAD_FOLDER'] = os.path.join(DATA_DIR, 'data', 'ref_photos')
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
@@ -34,7 +32,7 @@ def load_config():
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
-    return {"children": [], "tolerance": 0.45}
+    return {"children": [], "tolerance": 0.4}
 
 def save_config(cfg):
     with open(CONFIG_FILE, 'w', encoding='utf-8') as f:

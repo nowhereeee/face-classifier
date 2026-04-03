@@ -14,39 +14,10 @@ if errorlevel 1 (
     exit /b 1
 )
 
-python -c "import dlib" >nul 2>&1
-if errorlevel 1 (
-    echo [INSTALL] Installing dlib...
-    pip install https://github.com/z-mahmud22/Dlib_Windows_Python3.x/raw/main/dlib-19.24.1-cp311-cp311-win_amd64.whl
-    if errorlevel 1 (
-        echo [ERROR] dlib install failed.
-        pause
-        exit /b 1
-    )
-) else (
-    echo [OK] dlib
-)
-
-python -c "import face_recognition" >nul 2>&1
-if errorlevel 1 (
-    echo [INSTALL] Installing face_recognition...
-    pip install face_recognition
-) else (
-    echo [OK] face_recognition
-)
-
-python -c "import numpy; exit(0 if int(numpy.__version__.split('.')[0]) < 2 else 1)" >nul 2>&1
-if errorlevel 1 (
-    echo [FIX] numpy downgrade...
-    pip install "numpy<2"
-) else (
-    echo [OK] numpy
-)
-
 python -c "import flask" >nul 2>&1
 if errorlevel 1 (
     echo [INSTALL] Installing flask...
-    pip install flask
+    pip install flask -q
 ) else (
     echo [OK] flask
 )
@@ -54,9 +25,25 @@ if errorlevel 1 (
 python -c "import cv2" >nul 2>&1
 if errorlevel 1 (
     echo [INSTALL] Installing opencv...
-    pip install opencv-python
+    pip install opencv-python -q
 ) else (
     echo [OK] opencv
+)
+
+python -c "import deepface" >nul 2>&1
+if errorlevel 1 (
+    echo [INSTALL] Installing deepface (tensorflow included, may take a while)...
+    pip install deepface -q
+) else (
+    echo [OK] deepface
+)
+
+python -c "import tf_keras" >nul 2>&1
+if errorlevel 1 (
+    echo [INSTALL] Installing tf-keras...
+    pip install tf-keras -q
+) else (
+    echo [OK] tf-keras
 )
 
 echo.
@@ -65,3 +52,4 @@ echo.
 timeout /t 1 >nul
 start http://localhost:5000
 python app.py
+pause
