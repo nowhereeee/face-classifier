@@ -9,10 +9,11 @@ __pycache__/
 # 사용자 데이터 (기준사진, 설정)
 data/
 
-# PyInstaller 빌드 결과
+# PyInstaller 빌드 관련
 dist/
 build/
 *.spec
+build.bat
 
 # 환경
 .env
