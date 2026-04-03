@@ -32,7 +32,7 @@ def load_config():
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
-    return {"children": [], "tolerance": 0.4}
+    return {"children": [], "tolerance": 0.65}
 
 def save_config(cfg):
     with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
@@ -139,7 +139,7 @@ def start_classify():
         return jsonify({"ok": False, "msg": "이미 분류 중입니다."})
 
     src_dir = request.json.get('src_dir', '').strip()
-    tolerance = float(request.json.get('tolerance', 0.45))
+    tolerance = float(request.json.get('tolerance', 0.65))
 
     if not src_dir or not os.path.isdir(src_dir):
         return jsonify({"ok": False, "msg": "올바른 폴더 경로를 입력하세요."})
