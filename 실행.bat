@@ -14,7 +14,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-python -c "import flask" >nul 2>&1
+pip show flask >nul 2>&1
 if errorlevel 1 (
     echo [INSTALL] Installing flask...
     pip install flask -q
@@ -22,7 +22,7 @@ if errorlevel 1 (
     echo [OK] flask
 )
 
-python -c "import cv2" >nul 2>&1
+pip show opencv-python >nul 2>&1
 if errorlevel 1 (
     echo [INSTALL] Installing opencv...
     pip install opencv-python -q
@@ -30,7 +30,7 @@ if errorlevel 1 (
     echo [OK] opencv
 )
 
-python -c "import deepface" >nul 2>&1
+pip show deepface >nul 2>&1
 if errorlevel 1 (
     echo [INSTALL] Installing deepface (tensorflow included, may take a while)...
     pip install deepface -q
@@ -38,7 +38,7 @@ if errorlevel 1 (
     echo [OK] deepface
 )
 
-python -c "import tf_keras" >nul 2>&1
+pip show tf-keras >nul 2>&1
 if errorlevel 1 (
     echo [INSTALL] Installing tf-keras...
     pip install tf-keras -q
