@@ -18,3 +18,4 @@ build.bat
 # 환경
 .env
 venv/
+PhotoClassifier.zip
