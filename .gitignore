@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 사용자 데이터 (기준사진, 설정)
+data/
+
+# PyInstaller 빌드 결과
+dist/
+build/
+*.spec
+
+# 환경
+.env
+venv/

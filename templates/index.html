@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>유치원 사진 자동분류</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: '맑은 고딕', sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 28px 16px; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; color: #1a1a2e; }
+  .sub { color: #888; font-size: 13px; margin-bottom: 24px; }
+
+  .card { background: #fff; border-radius: 14px; padding: 22px 24px; margin-bottom: 18px; box-shadow: 0 1px 6px rgba(0,0,0,.07); }
+  .card h2 { font-size: 15px; font-weight: 700; margin-bottom: 16px; color: #444; }
+
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  input[type=text] { flex: 1; min-width: 120px; padding: 9px 13px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
+  input[type=text]:focus { border-color: #5b8ef0; }
+  input[type=file] { display: none; }
+
+  .btn { padding: 9px 18px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .15s; }
+  .btn:hover { opacity: .85; }
+  .btn-blue  { background: #5b8ef0; color: #fff; }
+  .btn-green { background: #3ecf8e; color: #fff; }
+  .btn-red   { background: #f06060; color: #fff; }
+  .btn-gray  { background: #e8e8e8; color: #555; }
+  .btn-big   { padding: 13px 32px; font-size: 15px; width: 100%; border-radius: 10px; background: #f06060; color: #fff; font-weight: 700; }
+
+  .file-label { display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; background: #f0f4ff; border: 1px dashed #a0b4f0; border-radius: 8px; font-size: 13px; color: #5b8ef0; cursor: pointer; }
+  .file-label:hover { background: #e4ebff; }
+  #file-hint { font-size: 12px; color: #999; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; padding: 8px 10px; background: #f7f7f7; color: #888; font-weight: 600; font-size: 12px; border-bottom: 1px solid #eee; }
+  td { padding: 9px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  .empty { text-align: center; color: #bbb; padding: 24px; font-size: 13px; }
+
+  .tol-row { display: flex; align-items: center; gap: 12px; }
+  .tol-row label { font-size: 13px; color: #666; white-space: nowrap; }
+  input[type=range] { flex: 1; accent-color: #5b8ef0; }
+  #tol-val { font-size: 13px; color: #5b8ef0; font-weight: 700; min-width: 32px; }
+  .tol-hint { font-size: 11px; color: #aaa; display: flex; justify-content: space-between; margin-top: 2px; }
+
+  #dir-input { font-size: 13px; }
+  .progress-wrap { margin-top: 14px; display: none; }
+  #prog-bar-bg { background: #eee; border-radius: 8px; height: 10px; overflow: hidden; }
+  #prog-bar { height: 10px; background: #3ecf8e; border-radius: 8px; width: 0%; transition: width .3s; }
+  #prog-text { font-size: 12px; color: #888; margin-top: 6px; }
+
+  #log-box { margin-top: 14px; background: #1e1e2e; border-radius: 10px; padding: 14px; height: 200px; overflow-y: auto; font-size: 12px; font-family: Consolas, monospace; color: #cdd6f4; display: none; }
+  .log-ok   { color: #a6e3a1; }
+  .log-miss { color: #f9e2af; }
+  .log-err  { color: #f38ba8; }
+  .log-info { color: #89b4fa; }
+
+  .toast { position: fixed; bottom: 28px; right: 28px; padding: 12px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; color: #fff; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 999; }
+  .toast.show { opacity: 1; }
+  .toast.ok  { background: #3ecf8e; }
+  .toast.err { background: #f06060; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📸 유치원 사진 자동분류</h1>
+  <p class="sub">기준사진을 등록하고, 분류할 사진 폴더를 지정하세요.</p>
+
+  <!-- 아이 등록 -->
+  <div class="card">
+    <h2>아이 등록</h2>
+    <div class="row">
+      <input type="text" id="child-name" placeholder="아이 이름" maxlength="20">
+      <label class="file-label" for="ref-photos">
+        사진 선택
+      </label>
+      <input type="file" id="ref-photos" accept="image/*" multiple>
+      <span id="file-hint">선택 없음</span>
+      <button class="btn btn-green" id="btn-add">등록</button>
+      <button class="btn btn-gray" id="btn-reset">전체 초기화</button>
+    </div>
+
+    <table id="child-table">
+      <thead>
+        <tr><th>이름</th><th>기준사진</th><th></th></tr>
+      </thead>
+      <tbody id="child-body">
+        {% if children %}
+          {% for c in children %}
+          <tr id="row-{{ c.name }}">
+            <td><strong>{{ c.name }}</strong></td>
+            <td style="color:#888" class="photo-count">{{ c.photos|length }}장</td>
+            <td>
+              <input type="file" class="add-photo-input" data-name="{{ c.name }}" accept="image/*" multiple style="display:none">
+              <button class="btn btn-blue add-photo-btn" style="padding:5px 12px;font-size:12px" data-name="{{ c.name }}">+ 추가</button>
+              <button class="btn btn-red del-btn" style="padding:5px 12px;font-size:12px" data-name="{{ c.name }}">삭제</button>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr id="empty-row"><td colspan="3" class="empty">등록된 아이가 없습니다.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 분류 설정 -->
+  <div class="card">
+    <h2>분류 설정</h2>
+    <div class="row" style="margin-bottom:16px">
+      <input type="text" id="dir-input" placeholder="사진 폴더 경로  예) C:\Users\이름\Pictures\졸업사진">
+    </div>
+    <div class="tol-row">
+      <label>인식 민감도</label>
+      <input type="range" id="tol-slider" min="0.25" max="0.40" step="0.01" value="{{ tolerance }}">
+      <span id="tol-val">{{ tolerance }}</span>
+    </div>
+    <div class="tol-hint"><span>엄격 (오인식 줄임)</span><span>느슨 (인식률 높임)</span></div>
+  </div>
+
+  <!-- 실행 -->
+  <div class="card">
+    <button class="btn btn-big" id="btn-classify">분류 시작</button>
+    <div class="progress-wrap" id="prog-wrap">
+      <div id="prog-bar-bg"><div id="prog-bar"></div></div>
+      <div id="prog-text">준비 중...</div>
+    </div>
+    <div id="log-box"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function() {
+  // 서버 종료 감지
+  setInterval(function() {
+    fetch('/progress').then(function(){}).catch(function() {
+      document.title = '서버 종료됨';
+      try { window.close(); } catch(e) {}
+      document.body.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100vh;font-size:20px;color:#888">서버가 종료되었습니다. 이 탭을 닫아주세요.</div>';
+    });
+  }, 5000);
+
+  // 웹 닫으면 서버도 종료
+  window.addEventListener('beforeunload', function() {
+    navigator.sendBeacon('/shutdown');
+  });
+
+  function showToast(msg, ok) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + (ok !== false ? 'ok' : 'err');
+    setTimeout(function() { t.className = 'toast'; }, 2800);
+  }
+
+  // 슬라이더
+  document.getElementById('tol-slider').addEventListener('input', function() {
+    document.getElementById('tol-val').textContent = this.value;
+  });
+
+  // 파일 선택 힌트
+  document.getElementById('ref-photos').addEventListener('change', function() {
+    var f = this.files;
+    document.getElementById('file-hint').textContent = f.length ? f.length + '장 선택됨' : '선택 없음';
+  });
+
+  // 등록 버튼
+  document.getElementById('btn-add').addEventListener('click', function() {
+    var name = document.getElementById('child-name').value.trim();
+    var files = document.getElementById('ref-photos').files;
+    if (!name) { showToast('이름을 입력하세요.', false); return; }
+    if (!files.length) { showToast('기준사진을 선택하세요.', false); return; }
+
+    var fd = new FormData();
+    fd.append('name', name);
+    for (var i = 0; i < files.length; i++) fd.append('photos', files[i]);
+
+    fetch('/add_child', { method: 'POST', body: fd })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        showToast(d.msg, d.ok);
+        if (!d.ok) return;
+
+        document.getElementById('child-name').value = '';
+        document.getElementById('ref-photos').value = '';
+        document.getElementById('file-hint').textContent = '선택 없음';
+
+        var tbody = document.getElementById('child-body');
+        var empty = document.getElementById('empty-row');
+        if (empty) empty.remove();
+        var existing = document.getElementById('row-' + name);
+        if (existing) existing.remove();
+
+        var tr = document.createElement('tr');
+        tr.id = 'row-' + name;
+        tr.innerHTML = '<td><strong>' + name + '</strong></td><td style="color:#888" class="photo-count">' + d.count + '장</td>' +
+          '<td><input type="file" class="add-photo-input" data-name="' + name + '" accept="image/*" multiple style="display:none">' +
+          '<button class="btn btn-blue add-photo-btn" style="padding:5px 12px;font-size:12px" data-name="' + name + '">+ 추가</button> ' +
+          '<button class="btn btn-red del-btn" style="padding:5px 12px;font-size:12px" data-name="' + name + '">삭제</button></td>';
+        tbody.appendChild(tr);
+      })
+      .catch(function() { showToast('서버 오류', false); });
+  });
+
+  // 사진 추가 버튼 (이벤트 위임)
+  document.getElementById('child-body').addEventListener('click', function(e) {
+    var btn = e.target.closest('.add-photo-btn');
+    if (!btn) return;
+    var name = btn.getAttribute('data-name');
+    var input = btn.parentElement.querySelector('.add-photo-input');
+    if (input) input.click();
+  });
+
+  // 사진 추가 파일 선택 후 업로드
+  document.getElementById('child-body').addEventListener('change', function(e) {
+    var input = e.target.closest('.add-photo-input');
+    if (!input) return;
+    var name = input.getAttribute('data-name');
+    var files = input.files;
+    if (!files.length) return;
+
+    var fd = new FormData();
+    fd.append('name', name);
+    for (var i = 0; i < files.length; i++) fd.append('photos', files[i]);
+
+    fetch('/add_photos', { method: 'POST', body: fd })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        showToast(d.msg, d.ok);
+        if (d.ok) {
+          var row = document.getElementById('row-' + name);
+          if (row) row.querySelector('.photo-count').textContent = d.count + '장';
+        }
+        input.value = '';
+      })
+      .catch(function() { showToast('서버 오류', false); });
+  });
+
+  // 전체 초기화
+  document.getElementById('btn-reset').addEventListener('click', function() {
+    if (!confirm('등록된 아이를 전부 삭제할까요?')) return;
+    fetch('/reset_all', { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.ok) {
+          document.getElementById('child-body').innerHTML =
+            '<tr id="empty-row"><td colspan="3" class="empty">등록된 아이가 없습니다.</td></tr>';
+          showToast('전체 초기화 완료');
+        }
+      })
+      .catch(function() { showToast('서버 오류', false); });
+  });
+
+  // 삭제 버튼 (이벤트 위임)
+  document.getElementById('child-body').addEventListener('click', function(e) {
+    var btn = e.target.closest('.del-btn');
+    if (!btn) return;
+    var name = btn.getAttribute('data-name');
+    if (!confirm(name + ' 삭제할까요?')) return;
+
+    fetch('/remove_child', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({name: name})
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) {
+        var row = document.getElementById('row-' + name);
+        if (row) row.remove();
+        if (!document.querySelector('#child-body tr[id^="row-"]')) {
+          var tr = document.createElement('tr');
+          tr.id = 'empty-row';
+          tr.innerHTML = '<td colspan="3" class="empty">등록된 아이가 없습니다.</td>';
+          document.getElementById('child-body').appendChild(tr);
+        }
+        showToast(name + ' 삭제됨');
+      } else {
+        showToast('삭제 실패', false);
+      }
+    })
+    .catch(function(err) { showToast('서버 오류: ' + err.message, false); });
+  });
+
+  // 분류 시작
+  var pollTimer = null;
+  document.getElementById('btn-classify').addEventListener('click', function() {
+    var src = document.getElementById('dir-input').value.trim();
+    var tol = document.getElementById('tol-slider').value;
+    if (!src) { showToast('폴더 경로를 입력하세요.', false); return; }
+
+    fetch('/start_classify', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ src_dir: src, tolerance: parseFloat(tol) })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok) { showToast(d.msg, false); return; }
+
+      document.getElementById('prog-wrap').style.display = 'block';
+      document.getElementById('log-box').style.display = 'block';
+      document.getElementById('log-box').innerHTML = '';
+      var prevLogLen = 0;
+
+      pollTimer = setInterval(function() {
+        fetch('/progress')
+          .then(function(r) { return r.json(); })
+          .then(function(pd) {
+            var pct = pd.total > 0 ? Math.round(pd.done / pd.total * 100) : 0;
+            document.getElementById('prog-bar').style.width = pct + '%';
+            document.getElementById('prog-text').textContent = pd.total > 0 ? pd.done + ' / ' + pd.total + ' 장 (' + pct + '%)' : '준비 중...';
+
+            var box = document.getElementById('log-box');
+            for (var i = prevLogLen; i < pd.log.length; i++) {
+              var msg = pd.log[i];
+              var div = document.createElement('div');
+              div.textContent = msg;
+              if (msg.indexOf('✔') === 0) div.className = 'log-ok';
+              else if (msg.indexOf('?') === 0) div.className = 'log-miss';
+              else if (msg.indexOf('오류') === 0 || msg.indexOf('⚠') === 0 || msg.indexOf('✖') === 0) div.className = 'log-err';
+              else div.className = 'log-info';
+              box.appendChild(div);
+            }
+            box.scrollTop = box.scrollHeight;
+            prevLogLen = pd.log.length;
+
+            if (!pd.running && pd.done > 0) {
+              clearInterval(pollTimer);
+              showToast('분류 완료!');
+            }
+          });
+      }, 600);
+    })
+    .catch(function() { showToast('서버 오류', false); });
+  });
+})();
+</script>
+</body>
+</html>
